@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WB实验代测表 - 在线填写与HTML导出</title>
+    <script src="https://cdn.jsdelivr.net/npm/docx@8.1.0/build/index.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Microsoft YaHei', sans-serif; }
+        body { background: #f0f2f5; color: #333; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 8px; box-shadow: 0 2px 20px rgba(0,0,0,0.1); overflow: hidden; }
+        header { background: linear-gradient(135deg, #2c3e50, #3498db); color: white; padding: 25px; text-align: center; }
+        header h1 { font-size: 28px; margin-bottom: 10px; }
+        header p { opacity: 0.9; font-size: 15px; }
+        .tabs { display: flex; background: #ecf0f1; border-bottom: 3px solid #3498db; }
+        .tab { flex: 1; padding: 16px; text-align: center; cursor: pointer; font-weight: bold; color: #555; transition: all 0.3s; }
+        .tab:hover { background: #d5dbdb; }
+        .tab.active { background: #3498db; color: white; }
+        .tab-content { padding: 30px; display: none; }
+        .tab-content.active { display: block; }
+        .form-section { margin-bottom: 30px; padding: 25px; border: 1px solid #e0e0e0; border-radius: 6px; background: #f9f9f9; }
+        h3 { color: #2c3e50; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #3498db; }
+        .form-row { display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 20px; }
+        .form-group { flex: 1; min-width: 250px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; color: #444; }
+        input[type="text"], input[type="date"], input[type="email"], input[type="tel"], select, textarea {
+            width: 100%; padding: 12px 15px; border: 1px solid #ccc; border-radius: 4px; font-size: 15px;
+        }
+        .important-note { background: #fff8e1; border-left: 5px solid #ff9800; padding: 20px; margin: 20px 0; border-radius: 4px; }
+        .checkbox-group, .radio-group { margin: 12px 0; }
+        .checkbox-group label, .radio-group label { display: inline-block; margin-right: 25px; font-weight: normal; cursor: pointer; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; border: 1px solid #ccc; background: white; }
+        th, td { border: 1px solid #ccc; padding: 10px; text-align: center; font-size: 14px; }
+        th { background: #e8f4fd; font-weight: 600; }
+        .gel-table input, .antibody-table input { width: 100%; border: none; background: transparent; text-align: center; padding: 5px; }
+        .btn { display: inline-block; padding: 12px 24px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: 600; margin: 8px; transition: 0.3s; }
+        .btn:hover { background: #2980b9; transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .btn-success { background: #27ae60; }
+        .btn-success:hover { background: #219653; }
+        .btn-secondary { background: #7f8c8d; }
+        .btn-secondary:hover { background: #6c7b7d; }
+        .btn-warning { background: #f39c12; }
+        .btn-warning:hover { background: #e67e22; }
+        .form-actions { text-align: center; margin-top: 40px; padding-top: 25px; border-top: 1px solid #eee; }
+        .signature-area { display: flex; gap: 25px; margin-top: 25px; }
+        .signature-box { flex: 1; }
+        .signature-line { border-bottom: 1px solid #666; padding-top: 30px; margin-top: 8px; }
+        .footer { text-align: center; padding: 25px; color: #7f8c8d; border-top: 1px solid #eee; font-size: 14px; }
+        .hidden { display: none; }
+        .success-message { text-align: center; padding: 60px 20px; }
+        .success-message h2 { color: #27ae60; margin-bottom: 20px; font-size: 28px; }
+        .export-options { display: flex; justify-content: center; gap: 20px; margin: 30px 0; flex-wrap: wrap; }
+        .warning-box { background: #ffebee; border-left: 5px solid #f44336; padding: 20px; margin: 20px 0; border-radius: 4px; }
+        .guide-box { background: #e8f5e9; border-left: 5px solid #4caf50; padding: 20px; margin: 20px 0; border-radius: 4px; }
+        .preview-section { background: #f8f9fa; border: 2px solid #e0e0e0; padding: 25px; margin: 25px 0; border-radius: 6px; }
+        .preview-content { font-family: 'SimSun', '宋体', serif; font-size: 12px; line-height: 1.6; color: #000; max-height: 500px; overflow-y: auto; padding: 20px; background: white; border-radius: 4px; }
+        .step-indicator { display: flex; justify-content: space-between; margin-bottom: 30px; position: relative; }
+        .step-indicator::before { content: ''; position: absolute; top: 15px; left: 5%; width: 90%; height: 3px; background: #e0e0e0; z-index: 1; }
+        .step { flex: 1; text-align: center; position: relative; z-index: 2; }
+        .step-number { width: 30px; height: 30px; line-height: 30px; border-radius: 50%; background: #e0e0e0; color: #666; font-weight: bold; display: inline-block; margin-bottom: 10px; }
+        .step.active .step-number { background: #3498db; color: white; }
+        .step.completed .step-number { background: #27ae60; color: white; }
+        .step-title { font-size: 14px; font-weight: 600; }
+        @media (max-width: 768px) {
+            .form-row, .signature-area, .export-options { flex-direction: column; gap: 15px; }
+            .tab { padding: 12px 8px; font-size: 14px; }
+            .step-indicator { flex-wrap: wrap; }
+            .step { flex: 0 0 33%; margin-bottom: 15px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>WB实验代测表在线填写系统</h1>
+            <p>填写表单，实时预览，导出格式规范的HTML文档</p>
+        </header>
+
+        <div class="step-indicator">
+            <div class="step active" id="step1-indicator">
+                <div class="step-number">1</div>
+                <div class="step-title">基本信息</div>
+            </div>
+            <div class="step" id="step2-indicator">
+                <div class="step-number">2</div>
+                <div class="step-title">胶版设计</div>
+            </div>
+            <div class="step" id="step3-indicator">
+                <div class="step-number">3</div>
+                <div class="step-title">实验参数</div>
+            </div>
+            <div class="step" id="step4-indicator">
+                <div class="step-number">4</div>
+                <div class="step-title">检测指标</div>
+            </div>
+            <div class="step" id="step5-indicator">
+                <div class="step-number">5</div>
+                <div class="step-title">预览导出</div>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" data-tab="step1">基本信息</div>
+            <div class="tab" data-tab="step2">胶版设计</div>
+            <div class="tab" data-tab="step3">实验参数</div>
+            <div class="tab" data-tab="step4">检测指标</div>
+            <div class="tab" data-tab="step5">预览与导出</div>
+        </div>
+
+        <!-- 步骤1: 基本信息 -->
+        <div id="step1" class="tab-content active">
+            <div class="warning-box">
+                <h3>⚠️ 重要提示</h3>
+                <p>请您确认所填信息准确无误。<strong style="color:#d32f2f;">实验开始后，任何信息更改将不被接受。</strong>若对实验结果有疑问，请在一个月内反馈。</p>
+                <p><strong>样品要求：</strong>细胞样品 ≥ 1×10⁷；组织样品 ≥ 100mg；外泌体样品需客户自行提取。</p>
+                <p><strong>寄样要求：</strong>所有样品必须使用<strong style="color:#d32f2f;">干冰运输</strong>，保存于-80°C或液氮中。</p>
+            </div>
+            
+            <div class="form-section">
+                <h3>委托方基本信息</h3>
+                <div class="form-row">
+                    <div class="form-group"><label>客户姓名 *</label><input type="text" id="clientName" required></div>
+                    <div class="form-group"><label>单位/学校</label><input type="text" id="clientOrg"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>联系电话 *</label><input type="tel" id="clientPhone" required></div>
+                    <!-- 修改点1：邮箱字段移除required属性，改为非必填 -->
+                    <div class="form-group"><label>电子邮箱</label><input type="email" id="clientEmail"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>送样日期 *</label><input type="date" id="sendDate" required></div>
+                    <div class="form-group"><label>预计实验日期</label><input type="date" id="expDate"></div>
+                </div>
+                
+                <div class="checkbox-group" style="margin-top: 20px;">
+                    <label>
+                        <input type="checkbox" id="confirmRequirements" required>
+                        <strong>我已阅读、理解并同意以上重要提示中的所有条款与要求。</strong>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="form-actions">
+                <button class="btn" id="nextTo2">下一步：胶版设计</button>
+            </div>
+        </div>
+
+        <!-- 步骤2: 胶版设计 -->
+        <div id="step2" class="tab-content">
+            <div class="form-section">
+                <h3>1. 胶版排列形式</h3>
+                <p>上样顺序从左到右：(请准确填写清楚每张膜的上样顺序)</p>
+                <p class="important-note">★需要多块时请附上EXCEL表格。</p>
+                
+                <div id="gelTablesContainer"></div>
+                
+                <div style="text-align:center; margin:25px 0;">
+                    <button class="btn btn-secondary" id="addGelBtn">+ 添加一块胶版</button>
+                </div>
+            </div>
+            
+            <div class="form-actions">
+                <button class="btn btn-secondary" id="backTo1">上一步</button>
+                <button class="btn" id="nextTo3">下一步：实验参数</button>
+            </div>
+        </div>
+
+        <!-- 步骤3: 实验参数 -->
+        <div id="step3" class="tab-content">
+            <div class="form-section">
+                <h3>实验参数设置</h3>
+                
+                <div class="form-group">
+                    <label>(1) 请在您要做的内参上打个对号，多个蛋白检测，内参需一致，以膜蛋白内参为准(√)(必填)</label>
+                    <div class="checkbox-group">
+                        <label><input type="checkbox" name="internalRef" value="GAPDH" checked> GAPDH(√)</label>
+                        <label><input type="checkbox" name="internalRef" value="β-actin"> β-actin()</label>
+                        <label>其他: <input type="text" id="otherRef" placeholder="输入其他内参"></label>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>(2) 是否同膜(内参和样本在一张膜上、默认洗膜重孵)</label>
+                    <div class="radio-group">
+                        <label><input type="radio" name="sameMembrane" value="yes" checked> 是(√)</label>
+                        <label><input type="radio" name="sameMembrane" value="no"> 否()</label>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>(3) 是否反膜(膜做完后两天左右就会发霉)</label>
+                    <div class="radio-group">
+                        <label><input type="radio" name="reverseMembrane" value="yes"> 是()</label>
+                        <label><input type="radio" name="reverseMembrane" value="no" checked> 否(√)</label>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>(4) 预计趋势(用&lt;和&gt;表示):</label>
+                    <input type="text" id="expectedTrend" placeholder="例如：AB<GH<EF<CD">
+                    <p style="font-size:14px; color:#666; margin-top:5px;">真实检测,不保证趋势,尽量往客户预期趋势上做</p>
+                </div>
+            </div>
+            
+            <div class="form-actions">
+                <button class="btn btn-secondary" id="backTo2">上一步</button>
+                <button class="btn" id="nextTo4">下一步：检测指标</button>
+            </div>
+        </div>
+
+        <!-- 步骤4: 检测指标与签名 -->
+        <div id="step4" class="tab-content">
+            <div class="form-section">
+                <h3>2. 检测指标信息</h3>
+                
+                <table class="antibody-table">
+                    <thead>
+                        <tr>
+                            <th>NO.</th><th>抗体名称</th><th>货号</th><th>体积</th><th>稀释比例</th>
+                            <th>分子量</th><th>来源</th><th>厂家</th><th>保存温度</th>
+                        </tr>
+                    </thead>
+                    <tbody id="antibodyBody"></tbody>
+                </table>
+                
+                <div style="text-align:center; margin:20px 0;">
+                    <button class="btn btn-secondary" id="addAntibodyBtn">+ 添加检测指标</button>
+                </div>
+                
+                <p>实验信息已全部填写清楚，无其他特殊要求。</p>
+                
+                <div class="signature-area">
+                    <div class="signature-box">
+                        <label>客户签名 *</label>
+                        <input type="text" id="signClient" required>
+                        <div class="signature-line"></div>
+                    </div>
+                    
+                    <div class="signature-box">
+                        <label>取样人签字 *</label>
+                        <input type="text" id="signSampler" required>
+                        <div class="signature-line"></div>
+                    </div>
+                    
+                    <div class="signature-box">
+                        <label>验收人签字</label>
+                        <input type="text" id="signAccept">
+                        <div class="signature-line"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-actions">
+                <button class="btn btn-secondary" id="backTo3">上一步</button>
+                <button class="btn" id="nextTo5">下一步：预览与导出</button>
+            </div>
+        </div>
+
+        <!-- 步骤5: 预览与导出 -->
+        <div id="step5" class="tab-content">
+            <div class="form-section">
+                <h3>文档预览</h3>
+                <p>下方是实时生成的文档预览，与最终导出的HTML文档内容结构完全一致。</p>
+                <div class="preview-section">
+                    <div id="liveDocPreview" class="preview-content"></div>
+                </div>
+            </div>
+            
+            <div class="form-section">
+                <h3>生成文档</h3>
+                <p>点击下方按钮，生成格式规范、美观的HTML文档。该文档适合打印，具有正式委托单的视觉效果。</p>
+                
+                <div class="checkbox-group" style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 4px;">
+                    <label>
+                        <input type="checkbox" id="finalConfirm" required>
+                        <strong>我确认所有信息准确无误，并已知晓实验开始后信息不可更改。我承诺提供的样品符合上述要求。</strong>
+                    </label>
+                </div>
+                
+                <div class="export-options">
+                    <!-- 修改点2：按钮文本从"导出为美观的HTML文档"改为"导出文件" -->
+                    <button class="btn btn-success" id="exportHtmlBtn">导出文件</button>
+                </div>
+            </div>
+            
+            <div class="form-actions">
+                <button class="btn btn-secondary" id="backTo4">上一步</button>
+                <button class="btn btn-warning" id="submitForm">提交委托单</button>
+            </div>
+        </div>
+
+        <!-- 成功页面 -->
+        <div id="successPage" class="hidden">
+            <div class="success-message">
+                <h2>✅ 委托单已就绪！</h2>
+                <p>您的WB实验代测表信息已保存。请下载最终文档。</p>
+                
+                <div class="export-options">
+                    <!-- 修改点3：成功页面的下载按钮文本也相应修改 -->
+                    <button class="btn btn-success" id="finalHtmlBtn">下载文件</button>
+                </div>
+                
+                <div style="margin-top: 40px;">
+                    <button class="btn" id="newFormBtn">填写新的委托单</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>WB实验代测表在线系统 | 生成美观规范的HTML文档</p>
+            <p>© 2023 实验委托系统 | 技术支持</p>
+        </div>
+    </div>
+
+    <script>
+        // 全局数据存储
+        let formData = { gels: [], antibodies: [] };
+        let gelCount = 0;
+
+        // 1. 标签页切换
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const target = tab.getAttribute('data-tab');
+                document.querySelectorAll('.tab, .tab-content').forEach(el => el.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById(target).classList.add('active');
+                
+                // 更新步骤指示器
+                const stepNum = target.replace('step', '');
+                document.querySelectorAll('.step').forEach(step => step.classList.remove('active', 'completed'));
+                document.getElementById(`step${stepNum}-indicator`).classList.add('active');
+                for (let i = 1; i < stepNum; i++) {
+                    document.getElementById(`step${i}-indicator`).classList.add('completed');
+                }
+                
+                if (target === 'step5') updateLivePreview();
+            });
+        });
+
+        // 2. 初始化页面
+        function initPage() {
+            // 设置默认日期
+            const today = new Date();
+            document.getElementById('sendDate').value = today.toISOString().split('T')[0];
+            const nextWeek = new Date(today);
+            nextWeek.setDate(today.getDate() + 7);
+            document.getElementById('expDate').value = nextWeek.toISOString().split('T')[0];
+            
+            // 初始化第一块胶版
+            addGelTable();
+            
+            // 初始化抗体表格：添加一个空行
+            addAntibodyRow();
+        }
+
+        // 3. 胶版表格管理
+        function addGelTable() {
+            gelCount++;
+            const container = document.getElementById('gelTablesContainer');
+            const div = document.createElement('div');
+            div.className = 'gel-section';
+            div.innerHTML = `
+                <h4>15孔胶 ${gelCount>1?`(第${gelCount}块)`:''}</h4>
+                <table class="gel-table">
+                    <tr><td rowspan="3">15孔胶</td><td>泳道</td>${
+                        Array.from({length:15}, (_,i)=>`<td>${i+1}</td>`).join('')
+                    }</tr>
+                    <tr><td>样品编号</td>
+                        <td><input type="text" value="Marker" readonly style="background:#f0f0f0"></td>${
+                        Array.from({length:14}, (_,i)=>`<td><input type="text" class="gel-sample" placeholder="样品"></td>`).join('')
+                    }</tr>
+                    <tr><td>趋势</td>
+                        <td><input type="text" readonly style="background:#f0f0f0"></td>${
+                        Array.from({length:14}, (_,i)=>`<td><input type="text" class="gel-trend" placeholder="趋势"></td>`).join('')
+                    }</tr>
+                </table>
+                ${gelCount>1?`<button class="btn btn-secondary" onclick="this.parentElement.remove(); gelCount--;" style="margin-top:10px; font-size:14px;">移除此胶版</button>`:''}
+            `;
+            container.appendChild(div);
+        }
+
+        // 4. 抗体行管理
+        function addAntibodyRow() {
+            const tbody = document.getElementById('antibodyBody');
+            const row = document.createElement('tr');
+            const index = tbody.children.length + 1;
+            row.innerHTML = `
+                <td>${index}</td>
+                <td><input type="text" placeholder="抗体名称"></td>
+                <td><input type="text" placeholder="货号"></td>
+                <td><input type="text" placeholder="体积"></td>
+                <td><input type="text" placeholder="稀释比例"></td>
+                <td><input type="text" placeholder="分子量"></td>
+                <td><input type="text" placeholder="来源"></td>
+                <td><input type="text" placeholder="厂家"></td>
+                <td><input type="text" placeholder="保存温度"></td>
+            `;
+            tbody.appendChild(row);
+        }
+
+        // 5. 收集所有表单数据
+        function collectFormData() {
+            formData.client = {
+                name: document.getElementById('clientName').value,
+                org: document.getElementById('clientOrg').value,
+                phone: document.getElementById('clientPhone').value,
+                email: document.getElementById('clientEmail').value, // 邮箱现在是非必填
+                sendDate: document.getElementById('sendDate').value,
+                expDate: document.getElementById('expDate').value
+            };
+            
+            formData.gels = [];
+            document.querySelectorAll('.gel-section').forEach(section => {
+                const samples = ['Marker'];
+                const trends = [''];
+                section.querySelectorAll('.gel-sample').forEach(input => samples.push(input.value || ''));
+                section.querySelectorAll('.gel-trend').forEach(input => trends.push(input.value || ''));
+                formData.gels.push({ samples, trends });
+            });
+            
+            formData.internalRefs = [];
+            document.querySelectorAll('input[name="internalRef"]:checked').forEach(cb => formData.internalRefs.push(cb.value));
+            formData.otherRef = document.getElementById('otherRef').value;
+            formData.sameMembrane = document.querySelector('input[name="sameMembrane"]:checked').value;
+            formData.reverseMembrane = document.querySelector('input[name="reverseMembrane"]:checked').value;
+            formData.expectedTrend = document.getElementById('expectedTrend').value;
+            
+            formData.antibodies = [];
+            document.querySelectorAll('#antibodyBody tr').forEach(row => {
+                const inputs = row.querySelectorAll('input');
+                formData.antibodies.push({
+                    name: inputs[0].value || '', catalog: inputs[1].value || '', 
+                    volume: inputs[2].value || '', dilution: inputs[3].value || '', 
+                    mw: inputs[4].value || '', source: inputs[5].value || '', 
+                    manufacturer: inputs[6].value || '', temp: inputs[7].value || ''
+                });
+            });
+            
+            formData.signatures = {
+                client: document.getElementById('signClient').value,
+                sampler: document.getElementById('signSampler').value,
+                accept: document.getElementById('signAccept').value || ''
+            };
+            
+            return formData;
+        }
+
+        // 6. 更新网页内的实时预览
+        function updateLivePreview() {
+            const data = collectFormData();
+            const previewContainer = document.getElementById('liveDocPreview');
+            previewContainer.innerHTML = generateDocumentHTML(data);
+        }
+
+        // 7. 生成美观的文档HTML（用于预览和导出）
+        function generateDocumentHTML(data) {
+            const today = new Date().toLocaleDateString('zh-CN');
+            let html = `
+                <div style="font-family: 'SimSun', 'STSong', '宋体', serif; color: #333; line-height: 1.5; padding: 20px; max-width: 800px; margin: 0 auto; background: white; box-shadow: 0 0 20px rgba(0,0,0,0.05); border: 1px solid #eee;">
+                    <!-- 页眉 -->
+                    <div style="text-align: center; border-bottom: 3px double #2c3e50; padding-bottom: 20px; margin-bottom: 30px;">
+                        <h1 style="margin: 0; color: #2c3e50; font-size: 24px;">Western Blot 实验委托检测单</h1>
+                        <p style="margin: 5px 0; color: #7f8c8d; font-size: 14px;">Western Blot Experiment Commission Form</p>
+                        <p style="margin: 5px 0; color: #95a5a6; font-size: 12px;">文档编号: WB-${Date.now().toString().slice(-8)} | 生成日期: ${today}</p>
+                    </div>
+
+                    <!-- 重要警告区域 -->
+                    <div style="background: linear-gradient(135deg, #fff8e1, #ffecb3); border-left: 6px solid #ff9800; padding: 15px 20px; margin-bottom: 25px; border-radius: 0 8px 8px 0; font-size: 13px;">
+                        <h3 style="margin: 0 0 8px 0; color: #e65100;"><span style="background: #ff9800; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; margin-right: 8px;">!</span><strong>重要声明与样品要求</strong></h3>
+                        <p style="margin: 5px 0;">1. 请您确认所填信息准确无误。<strong style="color:#d32f2f;">实验正式开始后，任何信息更改申请将不被接受。</strong></p>
+                        <p style="margin: 5px 0;">2. 若对实验结果有疑问，请于报告发出后一个月内反馈。</p>
+                        <p style="margin: 5px 0;">3. <strong>样品最低要求</strong>：细胞 ≥ 1×10⁷；组织 ≥ 100mg；外泌体需客户自行提取。</p>
+                        <p style="margin: 5px 0;">4. <strong>寄样要求</strong>：必须使用<strong style="color:#d32f2f;">干冰运输</strong>，并保存于-80°C或液氮中。</p>
+                    </div>
+            `;
+            
+            // 1. 委托方信息
+            html += `
+                <div style="margin-bottom: 30px;">
+                    <h2 style="color: #2c3e50; font-size: 18px; padding-bottom: 8px; border-bottom: 2px solid #3498db;">委托方信息 | Client Information</h2>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; margin-top: 15px;">
+                        <div style="background: #f8f9fa; padding: 12px 15px; border-radius: 6px;">
+                            <strong style="display: block; color: #555; font-size: 12px;">客户姓名</strong>
+                            <span style="font-size: 16px;">${data.client.name}</span>
+                        </div>
+                        <div style="background: #f8f9fa; padding: 12px 15px; border-radius: 6px;">
+                            <strong style="display: block; color: #555; font-size: 12px;">单位/学校</strong>
+                            <span>${data.client.org || '--'}</span>
+                        </div>
+                        <div style="background: #f8f9fa; padding: 12px 15px; border-radius: 6px;">
+                            <strong style="display: block; color: #555; font-size: 12px;">联系电话</strong>
+                            <span>${data.client.phone}</span>
+                        </div>
+                        <div style="background: #f8f9fa; padding: 12px 15px; border-radius: 6px;">
+                            <strong style="display: block; color: #555; font-size: 12px;">电子邮箱</strong>
+                            <span>${data.client.email || '--'}</span>
+                        </div>
+                        <div style="background: #f8f9fa; padding: 12px 15px; border-radius: 6px;">
+                            <strong style="display: block; color: #555; font-size: 12px;">送样日期</strong>
+                            <span>${data.client.sendDate}</span>
+                        </div>
+                        <div style="background: #f8f9fa; padding: 12px 15px; border-radius: 6px;">
+                            <strong style="display: block; color: #555; font-size: 12px;">预计实验日期</strong>
+                            <span>${data.client.expDate || '待定'}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // 2. 胶版设计
+            html += `
+                <div style="margin-bottom: 30px;">
+                    <h2 style="color: #2c3e50; font-size: 18px; padding-bottom: 8px; border-bottom: 2px solid #3498db;">1. 胶版排列形式 | Gel Layout</h2>
+                    <p style="font-size: 13px; color: #666; margin: 10px 0;">上样顺序从左到右 (请准确填写每张膜的上样顺序)</p>
+            `;
+            data.gels.forEach((gel, idx) => {
+                html += `
+                    <div style="margin: 20px 0;">
+                        <div style="font-weight: bold; color: #2c3e50; margin-bottom: 8px; font-size: 14px;">15孔胶 ${data.gels.length > 1 ? `(第${idx+1}块)` : ''}</div>
+                        <table style="border-collapse: collapse; width: 100%; font-size: 12px; border: 1px solid #bdc3c7;">
+                            <thead>
+                                <tr style="background: #ecf0f1;">
+                                    <th style="border: 1px solid #bdc3c7; padding: 10px; width: 60px;" rowspan="3">15孔胶</th>
+                                    <th style="border: 1px solid #bdc3c7; padding: 10px; width: 60px;">泳道</th>
+                `;
+                for (let i = 1; i <= 15; i++) {
+                    html += `<th style="border: 1px solid #bdc3c7; padding: 8px; background: #2c3e50; color: white;">${i}</th>`;
+                }
+                html += `</tr>`;
+                // 样品行
+                html += `<tr style="background: #f8f9fa;"><th style="border: 1px solid #bdc3c7; padding: 10px;">样品编号</th>`;
+                gel.samples.forEach((s, i) => {
+                    const bgColor = i === 0 ? '#34495e' : (i % 2 === 0 ? '#f8f9fa' : '#ffffff');
+                    const textColor = i === 0 ? 'white' : '#2c3e50';
+                    html += `<td style="border: 1px solid #bdc3c7; padding: 10px; background: ${bgColor}; color: ${textColor}; font-weight: ${i===0?'bold':'normal'}">${s || (i===0?'Marker':'--')}</td>`;
+                });
+                html += `</tr>`;
+                // 趋势行
+                html += `<tr style="background: #f8f9fa;"><th style="border: 1px solid #bdc3c7; padding: 10px;">趋势</th>`;
+                gel.trends.forEach((t, i) => {
+                    const bgColor = i === 0 ? '#f8f9fa' : (i % 2 === 0 ? '#f8f9fa' : '#ffffff');
+                    html += `<td style="border: 1px solid #bdc3c7; padding: 10px; background: ${bgColor};">${t || ''}</td>`;
+                });
+                html += `</tr></table></div>`;
+            });
+            html += `</div>`;
+            
+            // 3. 实验参数
+            html += `
+                <div style="margin-bottom: 30px;">
+                    <h2 style="color: #2c3e50; font-size: 18px; padding-bottom: 8px; border-bottom: 2px solid #3498db;">实验参数设置 | Experiment Parameters</h2>
+                    <div style="margin-top: 15px;">
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; margin-bottom: 10px;">
+                            <strong style="display: block; color: #2c3e50; margin-bottom: 5px;">(1) 内参选择 (Internal Reference)</strong>
+                            <div>${formData.internalRefs.map(r => `<span style="background: ${r==='GAPDH'?'#27ae60':'#bdc3c7'}; color: white; padding: 2px 8px; border-radius: 10px; display: inline-block; margin: 2px; font-size: 12px;">${r}${r==='GAPDH'?'(√)':'()'}</span>`).join(' ')} ${formData.otherRef?`<span style="background: #95a5a6; color: white; padding: 2px 8px; border-radius: 10px; display: inline-block; margin: 2px; font-size: 12px;">${formData.otherRef}()</span>`:''}</div>
+                        </div>
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; margin-bottom: 10px;">
+                            <strong style="display: block; color: #2c3e50; margin-bottom: 5px;">(2) 是否同膜 (Same Membrane?)</strong>
+                            <div>${formData.sameMembrane==='yes'?'<span style="background: #27ae60; color: white; padding: 4px 12px; border-radius: 4px; margin-right: 10px;">是 (√)</span><span style="padding: 4px 12px;">否 ()</span>':'<span style="padding: 4px 12px; margin-right: 10px;">是 ()</span><span style="background: #27ae60; color: white; padding: 4px 12px; border-radius: 4px;">否 (√)</span>'}</div>
+                        </div>
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; margin-bottom: 10px;">
+                            <strong style="display: block; color: #2c3e50; margin-bottom: 5px;">(3) 是否反膜 (Reverse Membrane?)</strong>
+                            <div>${formData.reverseMembrane==='yes'?'<span style="padding: 4px 12px; margin-right: 10px;">是 ()</span><span style="background: #27ae60; color: white; padding: 4px 12px; border-radius: 4px;">否 (√)</span>':'<span style="background: #27ae60; color: white; padding: 4px 12px; border-radius: 4px; margin-right: 10px;">是 (√)</span><span style="padding: 4px 12px;">否 ()</span>'}</div>
+                        </div>
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 6px;">
+                            <strong style="display: block; color: #2c3e50; margin-bottom: 5px;">(4) 预计趋势 (Expected Trend)</strong>
+                            <div style="font-size: 16px; color: #e74c3c; font-family: monospace; padding: 8px; background: white; border: 1px dashed #ddd; border-radius: 4px;">${formData.expectedTrend}</div>
+                            <p style="font-size: 12px; color: #7f8c8d; margin: 8px 0 0 0;">真实检测，不保证趋势，尽量往客户预期趋势上做。</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // 4. 检测指标
+            const hasAntibodyData = formData.antibodies.some(ab => ab.name || ab.catalog);
+            if (hasAntibodyData) {
+                html += `
+                    <div style="margin-bottom: 30px;">
+                        <h2 style="color: #2c3e50; font-size: 18px; padding-bottom: 8px; border-bottom: 2px solid #3498db;">2. 检测指标信息 | Antibody Information</h2>
+                        <div style="margin-top: 15px; overflow-x: auto;">
+                            <table style="border-collapse: collapse; width: 100%; font-size: 12px; border: 1px solid #bdc3c7;">
+                                <thead>
+                                    <tr style="background: #2c3e50; color: white;">
+                                        <th style="border: 1px solid #7f8c8d; padding: 12px 8px;">NO.</th>
+                                        <th style="border: 1px solid #7f8c8d; padding: 12px 8px;">抗体名称</th>
+                                        <th style="border: 1px solid #7f8c8d; padding: 12px 8px;">货号</th>
+                                        <th style="border: 1px solid #7f8c8d; padding: 12px 8px;">体积</th>
+                                        <th style="border: 1px solid #7f8c8d; padding: 12px 8px;">稀释比例</th>
+                                        <th style="border: 1px solid #7f8c8d; padding: 12px 8px;">分子量</th>
+                                        <th style="border: 1px solid #7f8c8d; padding: 12px 8px;">来源</th>
+                                        <th style="border: 1px solid #7f8c8d; padding: 12px 8px;">厂家</th>
+                                        <th style="border: 1px solid #7f8c8d; padding: 12px 8px;">保存温度</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                `;
+                formData.antibodies.forEach((ab, i) => {
+                    if (ab.name || ab.catalog) {
+                        const rowBg = i % 2 === 0 ? '#f8f9fa' : '#ffffff';
+                        html += `
+                                    <tr style="background: ${rowBg};">
+                                        <td style="border: 1px solid #ddd; padding: 10px 8px; text-align: center; font-weight: bold;">${i+1}</td>
+                                        <td style="border: 1px solid #ddd; padding: 10px 8px;">${ab.name || '--'}</td>
+                                        <td style="border: 1px solid #ddd; padding: 10px 8px; font-family: monospace;">${ab.catalog || '--'}</td>
+                                        <td style="border: 1px solid #ddd; padding: 10px 8px; text-align: center;">${ab.volume || '--'}</td>
+                                        <td style="border: 1px solid #ddd; padding: 10px 8px;">${ab.dilution || '--'}</td>
+                                        <td style="border: 1px solid #ddd; padding: 10px 8px; text-align: center;">${ab.mw || '--'}</td>
+                                        <td style="border: 1px solid #ddd; padding: 10px 8px;">${ab.source || '--'}</td>
+                                        <td style="border: 1px solid #ddd; padding: 10px 8px;">${ab.manufacturer || '--'}</td>
+                                        <td style="border: 1px solid #ddd; padding: 10px 8px; text-align: center;">${ab.temp || '--'}</td>
+                                    </tr>
+                        `;
+                    }
+                });
+                html += `</tbody></table></div></div>`;
+            }
+            
+            // 5. 签名区域
+            html += `
+                <div style="margin-bottom: 40px;">
+                    <p style="font-style: italic; color: #666; margin-bottom: 20px;">实验信息已全部填写清楚，无其他特殊要求。</p>
+                    <div style="display: flex; justify-content: space-between; gap: 20px;">
+                        <div style="flex: 1; text-align: center;">
+                            <div style="padding: 15px; border: 1px solid #bdc3c7; border-radius: 8px; background: #f8f9fa;">
+                                <strong style="display: block; margin-bottom: 10px; color: #2c3e50;">客户签名</strong>
+                                <div style="font-size: 18px; min-height: 30px; border-bottom: 2px solid #7f8c8d; padding-bottom: 5px;">${data.signatures.client}</div>
+                                <div style="font-size: 12px; color: #95a5a6; margin-top: 5px;">Client Signature</div>
+                            </div>
+                        </div>
+                        <div style="flex: 1; text-align: center;">
+                            <div style="padding: 15px; border: 1px solid #bdc3c7; border-radius: 8px; background: #f8f9fa;">
+                                <strong style="display: block; margin-bottom: 10px; color: #2c3e50;">取样人签字</strong>
+                                <div style="font-size: 18px; min-height: 30px; border-bottom: 2px solid #7f8c8d; padding-bottom: 5px;">${data.signatures.sampler}</div>
+                                <div style="font-size: 12px; color: #95a5a6; margin-top: 5px;">Sampler Signature</div>
+                            </div>
+                        </div>
+                        <div style="flex: 1; text-align: center;">
+                            <div style="padding: 15px; border: 1px solid #bdc3c7; border-radius: 8px; background: #f8f9fa;">
+                                <strong style="display: block; margin-bottom: 10px; color: #2c3e50;">验收人签字</strong>
+                                <div style="font-size: 18px; min-height: 30px; border-bottom: 2px solid #7f8c8d; padding-bottom: 5px;">${data.signatures.accept || ''}</div>
+                                <div style="font-size: 12px; color: #95a5a6; margin-top: 5px;">Acceptor Signature</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // 6. 页脚
+            html += `
+                <div style="text-align: center; padding-top: 30px; border-top: 1px solid #ecf0f1; color: #95a5a6; font-size: 12px;">
+                    <p>--- 文档预览生成于 ${today} | 最终版本以导出文件为准 ---</p>
+                </div>
+            </div> <!-- 关闭最外层容器 -->
+            `;
+            return html;
+        }
+
+        // 8. 导出为美观的HTML文件
+        function exportAsHTML() {
+            const data = collectFormData();
+            if(!data.client.name.trim()) { alert('请先填写客户姓名'); return; }
+            if(!data.client.phone.trim()) { alert('请先填写联系电话'); return; }
+            
+            if (!document.getElementById('finalConfirm')?.checked) {
+                alert('请勾选最终确认框，表明您已确认所有信息及责任条款。');
+                return;
+            }
+            
+            const today = new Date().toLocaleDateString('zh-CN');
+            const docHtmlContent = generateDocumentHTML(data);
+            
+            const fullHtml = `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WB实验代测表 - ${data.client.name}</title>
+    <style>
+        @media print {
+            body { margin: 0; padding: 0; }
+            .page-break { page-break-before: always; }
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'SimSun', 'STSong', '宋体', serif;
+            font-size: 12pt;
+            line-height: 1.6;
+            color: #000;
+            padding: 2cm;
+            background: white;
+            max-width: 21cm;
+            margin: 0 auto;
+        }
+        .document-header {
+            text-align: center;
+            border-bottom: 3px double #2c3e50;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .document-title {
+            margin: 0;
+            color: #2c3e50;
+            font-size: 24pt;
+        }
+        .warning-box {
+            background: #fff8e1;
+            border-left: 6px solid #ff9800;
+            padding: 15px 20px;
+            margin-bottom: 25px;
+            border-radius: 0 8px 8px 0;
+            font-size: 11pt;
+        }
+        .section-title {
+            color: #2c3e50;
+            font-size: 16pt;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #3498db;
+            margin-top: 30px;
+            margin-bottom: 20px;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 12px;
+            margin-top: 15px;
+        }
+        .info-card {
+            background: #f8f9fa;
+            padding: 12px 15px;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            font-size: 10pt;
+            border: 1px solid #bdc3c7;
+            margin: 15px 0;
+        }
+        th {
+            background: #2c3e50;
+            color: white;
+            border: 1px solid #34495e;
+            padding: 12px 8px;
+            font-weight: 600;
+            text-align: center;
+        }
+        td {
+            border: 1px solid #ddd;
+            padding: 10px 8px;
+            vertical-align: middle;
+        }
+        .signature-container {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            margin-top: 40px;
+        }
+        .signature-box {
+            flex: 1;
+            text-align: center;
+            padding: 15px;
+            border: 1px solid #bdc3c7;
+            border-radius: 8px;
+            background: #f8f9fa;
+        }
+        .signature-line {
+            min-height: 40px;
+            border-bottom: 2px solid #7f8c8d;
+            margin-top: 10px;
+            padding-bottom: 5px;
+            font-size: 14pt;
+        }
+    </style>
+</head>
+<body>
+    ${docHtmlContent}
+</body>
+</html>`;
+            
+            const blob = new Blob([fullHtml], { type: 'text/html' });
+            saveAs(blob, `WB实验代测表_${data.client.name}_${data.client.sendDate || today}.html`);
+            alert(`文件已生成！文件名：WB实验代测表_${data.client.name}.html`);
+        }
+
+        // 9. 事件绑定与初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            initPage();
+            
+            // 步骤导航
+            document.getElementById('nextTo2').addEventListener('click', function() {
+                if (!document.getElementById('clientName').value || !document.getElementById('clientPhone').value) {
+                    alert('请填写客户姓名和联系电话');
+                    return;
+                }
+                if (!document.getElementById('confirmRequirements').checked) {
+                    alert('请确认您已阅读并同意重要提示中的条款与要求');
+                    return;
+                }
+                document.querySelector('[data-tab="step2"]').click();
+            });
+            
+            document.getElementById('nextTo3').addEventListener('click', () => document.querySelector('[data-tab="step3"]').click());
+            document.getElementById('nextTo4').addEventListener('click', () => document.querySelector('[data-tab="step4"]').click());
+            document.getElementById('nextTo5').addEventListener('click', () => {
+                if (!document.getElementById('signClient').value || !document.getElementById('signSampler').value) {
+                    alert('请填写客户签名和取样人签字');
+                    return;
+                }
+                updateLivePreview();
+                document.querySelector('[data-tab="step5"]').click();
+            });
+            
+            document.getElementById('backTo1').addEventListener('click', () => document.querySelector('[data-tab="step1"]').click());
+            document.getElementById('backTo2').addEventListener('click', () => document.querySelector('[data-tab="step2"]').click());
+            document.getElementById('backTo3').addEventListener('click', () => document.querySelector('[data-tab="step3"]').click());
+            document.getElementById('backTo4').addEventListener('click', () => document.querySelector('[data-tab="step4"]').click());
+            
+            // 功能按钮
+            document.getElementById('addGelBtn').addEventListener('click', addGelTable);
+            document.getElementById('addAntibodyBtn').addEventListener('click', () => addAntibodyRow());
+            document.getElementById('exportHtmlBtn').addEventListener('click', exportAsHTML);
+            document.getElementById('finalHtmlBtn').addEventListener('click', exportAsHTML);
+            
+            document.getElementById('submitForm').addEventListener('click', () => {
+                if (!document.getElementById('finalConfirm')?.checked) {
+                    alert('请勾选最终确认框，表明您已确认所有信息及责任条款。');
+                    return;
+                }
+                document.querySelector('.container').style.display = 'none';
+                document.getElementById('successPage').classList.remove('hidden');
+            });
+            
+            document.getElementById('newFormBtn').addEventListener('click', () => location.reload());
+            
+            // 实时预览更新
+            document.querySelectorAll('input').forEach(input => {
+                input.addEventListener('input', () => {
+                    if (document.querySelector('#step5').classList.contains('active')) {
+                        updateLivePreview();
+                    }
+                });
+            });
+            
+            document.querySelectorAll('input[type="checkbox"], input[type="radio"]').forEach(input => {
+                input.addEventListener('change', () => {
+                    if (document.querySelector('#step5').classList.contains('active')) {
+                        updateLivePreview();
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
